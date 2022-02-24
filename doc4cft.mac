@@ -1,0 +1,696 @@
+import "../mac/m_sys/evd/evd_all.mac";
+import "../mac/m_sys/evd/4cft/doc4lib.car";
+
+var cft_Doc    = TBFile("cft_doc.dbt",  "WC+",0,"..\\DBFile\\cft_doc.dbt",  "bankcft.def");
+var cft_Doc6   = TBFile("cft_doc.dbt",  "W",  9,"..\\DBFile\\cft_doc.dbt",  "bankcft.def");
+var cft_Doc2   = TBFile("cft_doc.dbt",  "W", 10,"..\\DBFile\\cft_doc.dbt",  "bankcft.def");
+var cft_Deal   = TBFile("cft_deal.dbt", "WC+",0,"..\\DBFile\\cft_deal.dbt", "bankcft.def");
+var cft_Carr   = TBFile("cft_carr.dbt", "WC+",0,"..\\DBFile\\cft_carr.dbt", "bankcft.def");
+var cft_Blnc   = TBFile("cft_blnc.dbt", "WC+",0,"..\\DBFile\\cft_blnc.dbt", "bankcft.def");
+
+var dt1=date(),tm1=time(),dt2,tm2;
+var ix=0;       //выгружено строк
+var iaccerr=0;  //ошибок в счетах
+
+macro acc_turn_add(account, dt, deb, krd, debRu, krdRu)
+  cft_Blnc.rec.account=account;
+  cft_Blnc.rec.dateo=dt;
+  if(cft_Blnc.geteq())
+    cft_Blnc.rec.d0   = cft_Blnc.rec.d0+deb;
+    cft_Blnc.rec.k0   = cft_Blnc.rec.k0+krd;
+    if(deb>0) cft_Blnc.rec.d0ru = cft_Blnc.rec.d0+debRu; end;
+    if(krd>0) cft_Blnc.rec.k0ru = cft_Blnc.rec.k0+krdRu; end;
+    cft_Blnc.update();
+  else
+    cft_Blnc.rec.d0   = deb;
+    cft_Blnc.rec.k0   = krd;
+    if(deb>0) cft_Blnc.rec.d0ru = debRu; end;
+    if(krd>0) cft_Blnc.rec.k0ru = krdRu; end;
+    cft_Blnc.insert;
+  end;
+end;
+
+macro is_ovp(account)
+  var r=false;
+  if(substr(account,1,5)=="00000")
+    r=true;
+  end;
+  return r;
+end;
+
+macro bal4acc(account,n)
+  if(valtype(n)==V_UNDEF)
+    n=2;
+  end;
+  return int(substr(account,1,n));
+end;
+
+macro curr(account)
+  var r=-1;
+  if(is_ovp(account))
+    return -1;
+  else
+    r=int(substr(account,6,3));
+    if(r==810)
+      r=0;
+    end;
+  end;
+  return r;
+end;
+
+macro trn2conv(DealNo, a,b)
+  cft_Doc.keynum =10;
+  cft_Doc2.keynum=10;
+  
+  cft_Doc.rec.DealNo=DealNo;
+  cft_Doc.rec.DealNN=a;
+  if(cft_Doc.geteq())
+    cft_Doc2.rec.DealNo=cft_Doc.rec.DealNo;
+    cft_Doc2.rec.DealNN=b;
+    if(cft_Doc2.geteq())
+      if(cft_Doc.rec.cur1==-1)
+        cft_Doc.rec.acc1=cft_Doc2.rec.acc1;
+        cft_Doc.rec.cur1=curr(cft_Doc.rec.acc1);
+        cft_Doc.rec.sum1=cft_Doc2.rec.sum1;
+        cft_Doc.update;
+      elif(cft_Doc.rec.cur2==-1)
+        cft_Doc.rec.acc2=cft_Doc2.rec.acc2;
+        cft_Doc.rec.cur2=curr(cft_Doc.rec.acc2);
+        cft_Doc.rec.sum2=cft_Doc2.rec.sum2;
+        cft_Doc.update;
+      end;
+      cft_Doc2.rec.is_skip="Y";
+      cft_Doc2.update;
+      /*
+      cft_Doc.rec.acc1=cft_Doc2.rec.acc1;
+      cft_Doc.rec.sumRu=cft_Doc2.rec.sumRu;
+      if(cft_Doc.rec.cur1==0) cft_Doc.rec.sum1=cft_Doc2.rec.sumRu; end;
+      if(cft_Doc.rec.cur2==0) cft_Doc.rec.sum2=cft_Doc2.rec.sumRu; end;
+
+      cft_Doc.rec.real_Payer       = cft_Doc2.rec.real_Payer;
+      cft_Doc.rec.real_Receiver    = cft_Doc2.rec.real_Receiver;
+      cft_Doc.rec.Account_Payer    = cft_Doc2.rec.Account_Payer;
+      cft_Doc.rec.Account_Receiver = cft_Doc2.rec.Account_Receiver;
+
+      cft_Doc.update;
+
+      cft_Doc2.rec.is_skip="Y";
+      cft_Doc2.update;
+      */
+    end;
+  end;
+  return true;
+end;
+
+
+macro trn2trn(DealNo, a,b)
+  cft_Doc.keynum =10;
+  cft_Doc2.keynum=10;
+  
+  cft_Doc.rec.DealNo=DealNo;
+  cft_Doc.rec.DealNN=a;
+  if(cft_Doc.geteq())
+    cft_Doc2.rec.DealNo=cft_Doc.rec.DealNo;
+    cft_Doc2.rec.DealNN=b;
+    if(cft_Doc2.geteq())
+      cft_Doc.rec.acc1=cft_Doc2.rec.acc1;
+      cft_Doc.rec.acc2=cft_Doc2.rec.acc2;
+      cft_Doc.rec.cur1=curr(cft_Doc.rec.acc1);
+      cft_Doc.rec.cur2=curr(cft_Doc.rec.acc2);
+      cft_Doc.rec.sumRu=cft_Doc2.rec.sumRu;
+      if(cft_Doc.rec.cur1==0) cft_Doc.rec.sum1=cft_Doc2.rec.sumRu; end;
+      if(cft_Doc.rec.cur2==0) cft_Doc.rec.sum2=cft_Doc2.rec.sumRu; end;
+
+      cft_Doc.rec.real_Payer       = cft_Doc2.rec.real_Payer;
+      cft_Doc.rec.real_Receiver    = cft_Doc2.rec.real_Receiver;
+      cft_Doc.rec.Account_Payer    = cft_Doc2.rec.Account_Payer;
+      cft_Doc.rec.Account_Receiver = cft_Doc2.rec.Account_Receiver;
+
+      cft_Doc.update;
+
+      cft_Doc2.rec.is_skip="Y";
+      cft_Doc2.update;
+    end;
+  end;
+  return true;
+end;
+
+macro DealInfo(dealNo, dealKind, dealCurr, dealRate, deal_is_bal, dealGround)
+  file dlinidoc (dlinidoc);
+  file dlinid   (dlinid) Key 5;
+  file dliniobd (dliniobd) Key 4; 
+
+  dlinidoc.Deal =  dealNo;
+  if(geteq(dlinidoc))
+    dlinid.iApplicationKind =  dlinidoc.iApplicationKind; 
+    dlinid.ApplicationKey   =  dlinidoc.ApplicationKey;  
+    if(GetEq(dlinid))//исходный баланс
+      dealKind   = dlinid.Kind_Carry;
+      dealCurr   = dlinid.Code_Currency;
+      dealRate   = double(dlinid.UserField1);
+      dealGround = dlinid.Ground;
+      deal_is_bal= "Y";
+    end;
+    dliniobd.iApplicationKind =  dlinidoc.iApplicationKind; 
+    dliniobd.ApplicationKey   =  dlinidoc.ApplicationKey;  
+    if(GetEq(dliniobd))//исходный внебаланс
+      dealKind   = dliniobd.Kind_Carry;
+      dealCurr   = dliniobd.Code_Currency;
+      dealRate   = double(dliniobd.UserField1);
+      dealGround = dliniobd.Ground;
+      deal_is_bal= "N";
+    end;
+  end;
+
+  setparm(1,dealKind);
+  setparm(2,dealCurr);
+  setparm(3,dealRate);
+  setparm(4,deal_is_bal);
+  setparm(5,dealGround);
+  return true;
+end;
+
+macro DealAdd(dealNo, NN, grnd)
+  var r=false;
+  cft_Deal.rec.dealNo=dealNo;
+  if(cft_Deal.geteq())
+    cft_Deal.rec.dealCnt=NN;
+    cft_Deal.update();
+  else
+    cft_Deal.rec.dealNo=dealNo;
+    DealInfo(cft_Deal.rec.dealNo, cft_Deal.rec.dealKind, cft_Deal.rec.dealCurr, cft_Deal.rec.dealRate, cft_Deal.rec.deal_is_bal, cft_Deal.rec.Ground);
+    if(cft_Deal.insert())
+      cft_Carr.rec.dealKind=cft_Deal.rec.dealKind;
+      if(cft_Carr.geteq())
+        cft_Carr.rec.count=cft_Carr.rec.count+1;
+        cft_Carr.update;
+      else
+        cft_Carr.rec.dealKind=cft_Deal.rec.dealKind;
+        cft_Carr.rec.count=1;
+        cft_Carr.insert;
+      end;
+      [DEAL ############ #### (бал:###, курс:############) #]
+      (dealNo, NN, cft_Deal.rec.deal_is_bal, cft_Deal.rec.dealRate, grnd+cft_Deal.rec.Ground);
+      r=true;
+    end;
+  end;
+  return r;
+end;
+
+macro DealDocFind(doc, dt, dealNo, dealKind, dealNN)
+  if(valtype(dt)==V_UNDEF)
+    dt=doc.Date_Carry;
+  end;
+  var stat, nn;
+  dealNo   = 0;//номер сделки
+  dealKind = 0;//номер сложной проводки
+  dealNN   = 0;//номер документа в сложной проводке
+
+  file dealdoc  (dealdoc);
+  file dlinidoc (dlinidoc);
+  file dlinid   (dlinid) Key 5;
+  file dliniobd (dliniobd) Key 4; 
+
+  keynum(dealdoc,0);
+  dealdoc.iApplicationKind =  doc.rec.iApplicationKind; 
+  dealdoc.ApplicationKey   =  doc.rec.ApplicationKey;  
+  if(geteq(dealdoc))
+     dealNo=dealdoc.deal;
+     dlinidoc.Deal =  dealdoc.Deal;
+     if(geteq(dlinidoc))
+       dlinid.iApplicationKind =  dlinidoc.iApplicationKind; 
+       dlinid.ApplicationKey   =  dlinidoc.ApplicationKey;  
+       if(GetEq(dlinid))//исходный документ нашли
+         dealKind=dlinid.Kind_Carry;
+       end;
+       dliniobd.iApplicationKind =  dlinidoc.iApplicationKind; 
+       dliniobd.ApplicationKey   =  dlinidoc.ApplicationKey;  
+       if(GetEq(dliniobd))//исходный документ нашли
+         dealKind=dliniobd.Kind_Carry;
+       end;
+     end;
+  end;
+
+  //номер проводки узнать
+  nn=0;
+  keynum(dealdoc,1);
+  dealdoc.deal=dealNo;
+  stat=getge(dealdoc);
+  //if(doc.rec.ApplicationKey=="201806011555180001000038") debugbreak; end;
+  while(stat and (dealNo==dealdoc.deal))
+    nn=nn+1;
+    if((doc.rec.ApplicationKey==dealdoc.ApplicationKey)and(doc.rec.iApplicationKind==dealdoc.iApplicationKind))
+      dealNN=nn;
+    end;
+    stat=next(dealdoc);
+  end;
+
+  setparm(2,dealNo);
+  setparm(3,dealKind);
+  setparm(4,dealNN);
+  return true;
+end;
+
+var arhrur     = TBFile("arhdoc");
+var arhcur     = TBFile("arhdoc$");
+var orhrur     = TBFile("obdocar");
+var orhcur     = TBFile("obdocar$");
+
+//var zperiod="2018-12";
+//var cft_Doc    = TBFile("doc4cft.dbt",  "WC+",0,"..\\workfile\\doc_cft_"+zperiod+".dbt","bankcft.def");
+
+var d1,d2, ii, stat, doc, ich, is_balance, rnd=Random;
+
+d1=date(14,11,2016);
+d2=date(14,11,2016);
+
+IF(evd_get2date(d1,d2,"период миграции"))
+
+  var fn1log=GetIniString("UNCTOBANK")+"/TxtFile/cft1form_"+rnd+".log";
+  setOutPut(fn1log,true);
+
+  FOR(ii,1,10)
+    ich=1;
+    if(ii==1)
+      is_balance=true;
+      doc=arhcur;
+    elif(ii==2)
+      is_balance=true;
+      doc=arhrur;
+    elif(ii==3)//2глава
+      is_balance=false;
+      doc=orhcur;
+      doc.keynum=1;
+      ich=2;
+      doc.rec.chapter=ich;
+    elif(ii==4)
+      is_balance=false;
+      doc=orhrur;
+      doc.keynum=1;
+      ich=2;
+      doc.rec.chapter=ich;
+    elif(ii==5)//3глава
+      is_balance=false;
+      doc=orhcur;
+      doc.keynum=1;
+      ich=3;
+      doc.rec.chapter=ich;
+    elif(ii==6)
+      is_balance=false;
+      doc=orhrur;
+      doc.keynum=1;
+      ich=3;
+      doc.rec.chapter=ich;
+    elif(ii==7)//4глава
+      is_balance=false;
+      doc=orhcur;
+      doc.keynum=1;
+      ich=4;
+      doc.rec.chapter=ich;
+    elif(ii==8)
+      is_balance=false;
+      doc=orhrur;
+      doc.keynum=1;
+      ich=4;
+      doc.rec.chapter=ich;
+    elif(ii==9)//5глава
+      is_balance=false;
+      doc=orhcur;
+      doc.keynum=1;
+      ich=5;
+      doc.rec.chapter=ich;
+    elif(ii==10)
+      is_balance=false;
+      doc=orhrur;
+      doc.keynum=1;
+      ich=5;
+      doc.rec.chapter=ich;
+    end;
+
+    doc.rec.Date_Carry=d1;
+    stat=doc.getge();
+    while(stat and (doc.rec.Date_Carry<=d2))
+      message(ich+" ГЛАВА (проход"+ii+"): "+string(doc.rec.Date_Carry:f)+"/"+doc.rec.Ground);
+      if(doc.rec.Result_Carry!=23)
+        if((ich==1)or(doc.rec.chapter==ich))
+          [##.### ########### ##################### #]
+          (ii, doc.rec.Result_Carry, doc.rec.Date_Carry:f,doc.rec.Sum:a, doc.rec.Ground);
+          copy(cft_Doc,doc);
+          cft_Doc.rec.DocCurr=doc.rec.Code_Currency;
+          if(ii==1)
+            //cft_Doc.rec.MFO_Payer=doc.rec.Code_Payer;
+            //cft_Doc.rec.MFO_Receiver=doc.rec.Code_Receiver;
+          end;
+          if(ii>2)
+            cft_Doc.rec.Shifr_Oper=doc.rec.Kind_Oper;
+            cft_Doc.rec.OKPO_Payer=doc.rec.INN_Payer;
+            cft_Doc.rec.OKPO_Receiver=doc.rec.INN_Receiver;
+            cft_Doc.rec.Real_Payer=doc.rec.Account_Payer;
+            cft_Doc.rec.Real_Receiver=doc.rec.Account_Receiver;
+          end;
+          cft_Doc.rec.DocFrom=ii;
+          cft_Doc.rec.DocChapter=ich;
+          cft_Doc.rec.is_skip="";
+          DealDocFind(doc, doc.rec.Date_Carry, cft_Doc.rec.dealNo, cft_Doc.rec.dealKind, cft_Doc.rec.dealNN);
+          cft_Doc.rec.acc1=cft_Doc.rec.Real_Payer;
+          cft_Doc.rec.acc2=cft_Doc.rec.Real_Receiver;
+          cft_Doc.rec.cur1=curr(cft_Doc.rec.Real_Payer);
+          cft_Doc.rec.cur2=curr(cft_Doc.rec.Real_Receiver);
+          if((cft_Doc.rec.cur1==0)and(cft_Doc.rec.cur2==0))
+            cft_Doc.rec.DocCurr=0;
+          end;
+          cft_Doc.rec.sum1=cft_Doc.rec.Sum;
+          cft_Doc.rec.sum2=cft_Doc.rec.Sum;
+          if(cft_Doc.rec.DocCurr==0)
+            cft_Doc.rec.sumru=cft_Doc.rec.Sum;
+          end;
+          cft_Doc.rec.icode=cftDocGenICODE(cft_Doc.rec.ApplicationKey,cft_Doc.rec.iApplicationKind, cft_Doc.rec.docFrom, cft_Doc.rec.docChapter);
+          cft_Doc.insert();
+        end;
+      end;
+      stat=doc.next();
+      //chapter
+      if(not is_balance) stat=(stat and (doc.rec.chapter==ich)); end;
+    end;
+
+  END;
+  setOutPut(NULL,true);
+  //viewfile(fn1log);
+
+  //сохраним инфу по сложным проводкам в cft_Deal
+  var fn2log=GetIniString("UNCTOBANK")+"/TxtFile/cft1deal_"+rnd+".log";
+  setOutPut(fn2log,true);
+  cft_Doc.keynum=10;
+  cft_Doc.rewind();
+  cft_Doc.rec.dealNo=1;
+  cft_Doc.rec.dealNN=0;
+  stat=cft_Doc.getge();
+  while(stat)
+    message("СДЕЛКИ: "+cft_Doc.rec.dealNo);
+    if((DealAdd(cft_Doc.rec.dealNo,cft_Doc.rec.dealNN,cft_Doc.rec.Ground))and(cft_Doc.rec.dealNo!=0))
+      //вывод внутрях
+    end;
+    stat=cft_Doc.next();
+  end;
+
+  //идем по валюте - исключаем покрытие, проставляем рублевую сумму
+  cft_Doc.rewind;
+  while(cft_Doc.next())
+    message("RUR ПРОПУСК ПОКРЫТИЯ - "+cft_Doc.rec.sumru);
+    if(cft_Doc.rec.DocCurr!=0)
+      if(false)
+      else
+        cft_Doc6.rec.iApplicationKind =  cft_Doc.rec.iApplicationKind;
+        cft_Doc6.rec.ApplicationKey   =  cft_Doc.rec.ApplicationKey;
+        cft_Doc6.rec.DocCurr          =  0;
+        if(cft_Doc6.geteq())
+          if((cft_Doc6.rec.Result_Carry==1)and(cft_Doc6.rec.DocChapter==4))
+          else
+            [RUR ПРОПУСК ПОКРЫТИЯ ############################## (##:####) #################### #]
+            (cft_Doc.rec.icode, cft_Doc6.rec.DocChapter, cft_Doc6.rec.Result_Carry, cft_Doc6.rec.Sum:a, cft_Doc6.rec.Ground);
+            cft_Doc.rec.sumru=cft_Doc6.rec.Sum;
+            cft_Doc.update;
+            cft_Doc6.rec.is_skip="Y";
+            cft_Doc6.update;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  
+  //
+  // бежим по сложным проводкам - убираем ОВП, проставляем суммы
+  //
+  cft_Doc2.keynum=10;
+  cft_Doc.rewind;
+  cft_Doc.keynum=10;
+  cft_Deal.rewind();
+  while(cft_Deal.next())
+    message("DEALS - "+cft_Doc.rec.DealNo);
+    // - тупо (1) проводку заполняем из (2) проводки
+    if(index("/1111/121/111/115/10/20/201/1010/3010/3111/3015/3020/3025/3121/1110/1020/1120/125/401/503/112/2035/2025/2015/","/"+string(cft_Deal.rec.DealKind)+"/")>0)
+      trn2trn(cft_Deal.rec.DealNo,1,2);
+    // - тупо (2) проводку заполняем из (3) проводки
+    elif(index("/1001/1002/1003/1611/1450/","/"+string(cft_Deal.rec.DealKind)+"/")>0)
+      trn2trn(cft_Deal.rec.DealNo,2,3);
+      if(index("/1001/","/"+string(cft_Deal.rec.DealKind)+"/")>0)//в дополнение (4)<-(5)
+        trn2trn(cft_Deal.rec.DealNo,4,5);
+      end;
+    // - тупо (3) проводку заполняем из <- (1) и (2) проводки перебором /конвертация/
+    elif(index("/30/31/1030/1031/1032/1033/1132/132/","/"+string(cft_Deal.rec.DealKind)+"/")>0)
+      //if(cft_Doc.rec.DealNo=="324354") debugbreak; end;
+      if((index("/132/","/"+string(cft_Deal.rec.DealKind)+"/")>0)and(cft_Deal.rec.deal_is_bal=="Y"))
+        trn2trn(cft_Deal.rec.DealNo,1,2);
+      elif((index("/1132/","/"+string(cft_Deal.rec.DealKind)+"/")>0)and(cft_Deal.rec.deal_is_bal=="N"))
+        trn2conv(cft_Deal.rec.DealNo,1,2);
+      else
+        cft_Doc.rec.DealNo=cft_Deal.rec.DealNo;
+        cft_Doc.rec.DealNN=3;
+        if(cft_Doc.geteq())
+          if((cft_Doc.rec.cur1==-1)or(cft_Doc.rec.cur2==-1))
+            // 1132 - тупо (1) <- (2)  и (3) <- (4)
+            trn2trn(cft_Deal.rec.DealNo,1,2);
+            trn2trn(cft_Deal.rec.DealNo,3,4);
+          else
+            cft_Doc2.rec.DealNo=cft_Doc.rec.DealNo;
+            cft_Doc2.rec.DealNN=1;
+            stat=cft_Doc2.geteq();
+            while(stat and (cft_Doc2.rec.DealNo==cft_Doc.rec.DealNo))
+              if((cft_Doc2.rec.DealNN==1) or (cft_Doc2.rec.DealNN==2))
+                if(cft_Doc.rec.acc1==cft_Doc2.rec.acc1)
+                  cft_Doc.rec.sum1=cft_Doc2.rec.sum1;
+                  cft_Doc.update;
+                end;
+                if(cft_Doc.rec.acc2==cft_Doc2.rec.acc2)
+                  cft_Doc.rec.sum2=cft_Doc2.rec.sum2;
+                  cft_Doc.update;
+                end;
+                cft_Doc2.rec.is_skip="Y";//(1) и (2) исключаем
+                cft_Doc2.update;
+              end;
+              stat=cft_Doc2.next;
+            end;
+          end;
+
+          if(index("/1030/","/"+string(cft_Deal.rec.DealKind)+"/")>0)
+            if(cft_Deal.rec.dealCnt==10)//если проводок 10
+              trn2trn(cft_Deal.rec.DealNo,7, 8);// (7) <- (8)
+              trn2trn(cft_Deal.rec.DealNo,9,10);// (9) <- (10)
+            end;
+          end;
+        end;
+      end;
+    elif(index("/1612/","/"+string(cft_Deal.rec.DealKind)+"/")>0)
+      //если проводок 5шт  (2) <- (3)  (4) <- (5)
+      if(cft_Deal.rec.dealCnt==5)
+        trn2trn(cft_Deal.rec.DealNo,2,3);
+        trn2trn(cft_Deal.rec.DealNo,4,5);
+      end;
+      if(cft_Deal.rec.dealNo==329452)
+        trn2trn(cft_Deal.rec.DealNo,2,3);
+      end;
+    elif(index("/1451/","/"+string(cft_Deal.rec.DealKind)+"/")>0)
+      if(cft_Deal.rec.dealCnt==3)
+        trn2trn(cft_Deal.rec.DealNo,2,3);
+      end;
+    // рубли - ниче делать не надо
+    elif(index("/9010/9011/405/406/407/412/3412/1703/9012/1450/4001/4002/1014/1012/","/"+string(cft_Deal.rec.DealKind)+"/")>0)
+      //[РУБЛИ БЕЗ ДЕЙСТВИЯ];
+    else
+      [!!! ВНИМАНИЕ !!!! СДЕЛКА ПРОПУСК ######### ########### #]
+      (cft_Deal.rec.DealKind, cft_Deal.rec.DealNo, cft_Deal.rec.Ground);
+    end;
+
+    // У КОТОРЫХ НУЖНО: (3) - суммы пересчитать по курсу
+    if(index("/1110/401/","/"+string(cft_Deal.rec.DealKind)+"/")>0)
+      cft_Doc.rec.DealNo=cft_Deal.rec.DealNo;
+      cft_Doc.rec.DealNN=3;
+      if(cft_Doc.geteq())
+        if(cft_Doc.rec.cur1==0)
+          cft_Doc.rec.sum2=cft_Doc.rec.sum1/CurrRate(cft_Doc.rec.cur2,cft_Doc.rec.Date_Carry);
+        end;
+        if(cft_Doc.rec.cur2==0)
+          cft_Doc.rec.sum1=cft_Doc.rec.sum2/CurrRate(cft_Doc.rec.cur1,cft_Doc.rec.Date_Carry);
+        end;
+        //а вообще исключим дооценку - вот только потом обороты по счетам "70%" не пойдут
+        /*
+        if(index("/401/","/"+string(cft_Deal.rec.DealKind)+"/")>0)
+        else
+          if(cft_Doc.rec.Sum==15999.50) debugbreak; end;
+          cft_Doc.rec.is_skip="Y";
+          cft_Doc.update;
+        end;
+        */
+      end;
+    end;
+  end;
+  
+  //переоценке сумму валюты проставим
+  cft_Doc.rewind;
+  while(cft_Doc.next())
+    message("проход - убираю ПЕРЕОЦЕНКИ: "+string(cft_Doc.rec.Date_Carry:m)+"//"+cft_Doc.rec.Ground);
+    if(cft_Doc.rec.is_skip!="Y")
+      if(cft_Doc.rec.Result_Carry==14)//исключаем документ рублевого покрытия
+        cft_Doc.rec.is_skip="Y";
+        cft_Doc.update;
+      end;
+      if((cft_Doc.rec.Result_Carry==18)or(cft_Doc.rec.Result_Carry==130))
+        // исключим рублевую сумму в курсовой разнице
+        [*** КУРСРАЗНИЦА ВНУЛЬ ### - ##################### ######################### ######################### #]
+        (cft_Doc.rec.Result_Carry, cft_Doc.rec.sumRu, cft_Doc.rec.acc1, cft_Doc.rec.acc2, cft_Doc.rec.Ground);
+        //cft_Doc.rec.is_skip="Y";
+        if(cft_Doc.rec.cur1==0)
+          cft_Doc.rec.sum2=0;
+        end;
+        if(cft_Doc.rec.cur2==0)
+          cft_Doc.rec.sum1=0;
+        end;
+        cft_Doc.update;
+      end;
+      // в дооценке рублевую сумму тоже обнулим
+      if(
+         //(index("/30/1030/1120/1031/","/"+string(cft_Doc.rec.DealKind)+"/")>0)and
+         (cft_Doc.rec.Result_Carry!=18)and
+         (cft_Doc.rec.sum1==cft_Doc.rec.sum2)and(cft_Doc.rec.cur2!=cft_Doc.rec.cur1)and
+         ( (index("/70/52/","/"+string(bal4acc(cft_Doc.rec.acc1))+"/")>0) or (index("/70/52/","/"+string(bal4acc(cft_Doc.rec.acc2))+"/")>0) )
+         //(( bal4acc(cft_Doc.rec.acc1)==70) or (bal4acc(cft_Doc.rec.acc2)==70))
+        )
+        [***  .ДООЦЕНКА ПЕРЕ - ##################### ######################### ######################### #]
+        (cft_Doc.rec.sumRu, cft_Doc.rec.acc1, cft_Doc.rec.acc2, cft_Doc.rec.Ground);
+        if(cft_Doc.rec.cur1==0)
+          cft_Doc.rec.sum2=0;
+        end;
+        if(cft_Doc.rec.cur2==0)
+          cft_Doc.rec.sum1=0;
+        end;
+        cft_Doc.update;
+      end;
+      //если валюты разные а суммы одинаковые - то пересчитаем по курсу цб
+      if((cft_Doc.rec.cur1!=cft_Doc.rec.cur2) and (cft_Doc.rec.sum1==cft_Doc.rec.sum2))
+        [*** НЕДОПРОВОДКА ################ ########## #]
+        (cft_Doc.rec.sum1, cft_Doc.rec.Date_Carry, cft_Doc.rec.Ground);
+        if(cft_Doc.rec.cur1==0)
+          cft_Doc.rec.sum2=cft_Doc.rec.sum1/CurrRate(cft_Doc.rec.cur2,cft_Doc.rec.Date_Carry);
+        elif(cft_Doc.rec.cur2==0)
+          cft_Doc.rec.sum1=cft_Doc.rec.sum2/CurrRate(cft_Doc.rec.cur1,cft_Doc.rec.Date_Carry);
+        else
+          [ ?? КОНВЕРТАЦИЯ СТРАННАЯ ??  ################ ########## #]
+          (cft_Doc.rec.sum1, cft_Doc.rec.Date_Carry, cft_Doc.rec.Ground);
+        end;
+        cft_Doc.update;
+      end;
+    end;
+  end;
+  setOutPut(NULL,true);
+  //viewfile(fn2log);
+
+  //
+  // ВЫВОД В ФАЙЛ - заодно сохраняем обороты
+  //
+  var fn9log=GetIniString("UNCTOBANK")+"/TxtFile/doc_"+rnd+".txt";
+  setOutPut(fn9log,true);
+  var dt=d2;
+
+  printHeader();
+  cft_Doc.rewind;
+  cft_Doc.keynum=0;
+  while(cft_Doc.next())
+    message("В ФАЙЛ: "+string(cft_Doc.rec.Date_Carry:f)+"/"+cft_Doc.rec.Ground);
+    if(cft_Doc.rec.is_skip=="Y")
+      cft_Doc.delete;
+    else
+      if(true)
+        println(toansi(cftDocStr(cft_Doc)));
+        ix=ix+1;
+        //printLine(cft_Doc);
+      end;
+      //dt=cft_Doc.rec.Date_Carry;
+      if(
+         false// or(cft_Doc.rec.cur2!=cft_Doc.rec.cur1)and( (bal4acc(cft_Doc.rec.acc1)==70) or (bal4acc(cft_Doc.rec.acc2)==70) )
+        )
+        /*
+        if(bal4acc(cft_Doc.rec.acc1)==70)
+          acc_turn_add(cft_Doc.rec.acc1, dt, cft_Doc.rec.sum1,                0, cft_Doc.rec.sumRu,                 0);
+        elif(bal4acc(cft_Doc.rec.acc2)==70)
+          acc_turn_add(cft_Doc.rec.acc2, dt,                0, cft_Doc.rec.sum2,                 0, cft_Doc.rec.sumRu);
+        end;
+        */
+      else
+        acc_turn_add(cft_Doc.rec.acc1, dt, cft_Doc.rec.sum1,                0, cft_Doc.rec.sumRu,                 0);
+        acc_turn_add(cft_Doc.rec.acc2, dt,                0, cft_Doc.rec.sum2, 0,                 cft_Doc.rec.sumRu);
+      end;
+    end;
+  end;
+  setOutPut(NULL,true);
+  //viewfile(fn9log);
+
+  //
+  // ПРОВЕРКА ОБОРОТОВ
+  //
+  var fn0log=GetIniString("UNCTOBANK")+"/TxtFile/cft_check_"+rnd+".txt";
+  setOutPut(fn0log,true);
+  [
+   --------------------------------------------------------------------- ############ ########### ---
+   ИТОГОВЫЕ ФАЙЛЫ /###########/
+   ПЕРИОД: ############ - ############
+
+
+   ПРОВЕРКА ПО ОБОРОТАМ
+   СЧЕТ                           ДАТА                      ДЕБ             КРЕД (файл)  vs     ДЕБ             КРЕД (абс)   {     ДЕБ             КРЕД (разница)}]
+  (dt1, tm1, rnd,
+   d1:f, d2:f);
+  cft_Blnc.rewind;
+  while(cft_Blnc.next)
+    message("ОБОРОТЫ "+cft_Blnc.rec.account);
+    cft_Blnc.rec.DebetA    = evd_d0(cft_Blnc.rec.account, d1, d2);//cft_Blnc.rec.dateo
+    cft_Blnc.rec.KreditA   = evd_k0(cft_Blnc.rec.account, d1, d2);//cft_Blnc.rec.dateo
+    cft_Blnc.rec.DebetAru  = evd_d0(cft_Blnc.rec.account, d1, d2, 810);//cft_Blnc.rec.dateo
+    cft_Blnc.rec.KreditAru = evd_k0(cft_Blnc.rec.account, d1, d2, 810);//cft_Blnc.rec.dateo
+    if((evd_round(cft_Blnc.rec.DebetA,2)==evd_round(cft_Blnc.rec.d0,2))and(evd_round(cft_Blnc.rec.KreditA,2)==evd_round(cft_Blnc.rec.k0,2)))
+      cft_Blnc.rec.is_ok="ok";
+      if((cft_Blnc.rec.DebetAru==cft_Blnc.rec.d0ru)and(cft_Blnc.rec.KreditAru==cft_Blnc.rec.k0ru))
+      else
+        //cft_Blnc.rec.is_ok="badRu";
+      end;
+    else
+      [########################### #################### ################# ################### vs ################# ###################  (################# ###################)]
+      (cft_Blnc.rec.account,
+       cft_Blnc.rec.dateo,
+       cft_Blnc.rec.d0:a,      cft_Blnc.rec.k0:a,
+       cft_Blnc.rec.DebetA:a,  cft_Blnc.rec.KreditA:a,
+       (cft_Blnc.rec.DebetA-cft_Blnc.rec.d0):a,
+       (cft_Blnc.rec.KreditA-cft_Blnc.rec.k0):a
+      );
+      cft_Blnc.rec.is_ok="err";
+      iaccerr=iaccerr+1;
+    end;
+    cft_Blnc.update();
+  end;
+  if(iaccerr==0)
+    [
+    
+        ОШИБОК В ОБОРОТАХ НЕТ...
+    ];
+  else
+    [
+    
+        ОШИБОЧНЫХ СЧЕТОВ ПО ОБОРОТАМ - #########
+    ](iaccerr);
+  end;
+  
+  dt2=date();
+  tm2=time();
+  [
+  
+   
+   
+   ВЫГРУЖЕННО СТРОК-ПРОВОДОК -  ##########
+   --------------------------------------------------------------------- ############ ########### ---
+   
+  ](ix, dt2, tm2);
+  setOutPut(NULL,true);
+  viewfile(fn0log);
+
+END;
+exit(1);

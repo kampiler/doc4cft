@@ -1,0 +1,328 @@
+macro del2crnl(s)
+  var r=s;
+  r=strsubst(r,"\n"," ");
+  r=strsubst(r,"\x0A"," ");
+  r=strsubst(r,"\x0C"," ");
+  
+  r=trim(r);
+  return(r);
+end;
+
+
+macro cl4acc(account)
+  var r="";
+  file acc(account);
+  acc.Account=account;
+  if(geteq(acc))
+    r=acc.Client;
+  end;
+  return r;
+end;
+
+macro nvl(k,v)
+  var r=k;
+  if(valtype(v)==V_UNDEF)
+    v="0";
+  end;
+  if(trim(r)=="")
+    r=v;
+  end;
+  return r;
+end;
+
+macro qq(s,n)
+  if(n==0)
+    return "";
+  else
+    return (evd_rz(string(s), n, " ", true));
+  end;
+end;
+
+macro dmy(dt)
+  var r="";
+  if(valtype(dt)==V_DATE)
+    r=string(dt:f);
+    r=strsubst(r,".","/");
+  end;
+  return r;
+end;
+
+macro shifri(cod,doc)
+  var r="…‡_…_„";
+  cod=int(cod);
+  if(cod==1) 
+    r="…‡_‹_“—";
+  elif(cod==2) 
+    r="…‡_‹_’…";
+  elif(cod==3) 
+    r="€‘‘_€‘•„_„"; if(substr(doc.rec.Account_Payer,1,2)=="40") r="€‘‘_—…_‚›„€—€"; end;
+  elif(cod==4) 
+    r="€‘‘_•„_„"; if(substr(doc.rec.Account_Receiver,1,2)=="40") r="€‘‘_‚_‚‡‘"; end;
+  elif(cod==6) 
+    r="…‡_€‘‘_";
+  elif(cod==8) 
+    r="‡€‚_€…„";
+  elif(cod==9) 
+    r="…‡_…_„";
+  elif(cod==16) 
+    r="…‡_‹_";
+  elif(cod==17) 
+    r="…‡_€_„";
+  elif(cod==18) 
+    r="…__‚›„_–…";
+  else
+    r=r+cod;
+  end;
+  return r;
+end;
+
+macro printHeader
+println(
+        "<ICODE                  >", // 25
+        "<FILIAL>"+                  //  8
+        "<DEPART            >",      // 20
+        "<DOCUMENT_DATE>",           // 15
+        "<DOCUMENT_NUM>",            // 14
+        "<DOCUMENT_USER          >", // 25
+        "<ACC_DT                 >", // 25
+        "<ACC_KT                 >", // 25
+        "<DATE_DEBET>",              // 12
+        "<DATE_DOC>",
+        "<DATE_INP>",
+        "<DATE_PROV>",
+        "<DATE_PL >",
+        "<DOC_SEND_REF>",
+        "<CURR_OPER>",
+        "<NAZN                                                                                                                                                                                                                                                    >",
+        "<NUM_CHECK>",
+        "<SERIES>",
+        "<PRIORITET>",
+        "<PROV_USER              >",
+        "<SUM               >",
+        "<SUM_PO            >",
+        "<SUM_NT            >",
+        "<SUM_KSPL                                                                                                                                                                                                                                                                                                                      >",
+        "<VID_DOC       >",
+        "<PACHKA>",
+        "<COMMENT                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       >",
+        "<COND_PAY_MEMO                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 >",
+        "<BUD_KBK           >",
+        "<BUD_DATE_EXP>",
+        "<BUD_DATE_NU>",
+        "<BUD_KOD_NAZN_PAY>",
+        "<BUD_NUM_EXP  >",
+        "<BUD_OKATO>",
+        "<BUD_TAXPAYER>",
+        "<BUD_TYPE_EXP>",
+        "<BUDGET_PAYMENT>",
+        "<KL_DT_INTERNAL>",
+        "<KL_DT_CLIENT           >",
+        "<KL_DT_ACC              >",
+        "<KL_DT_INN     >",
+        "<KL_DT_KPP>",
+        "<KL_DT_BIC>",
+        "<KL_DT_NAME                                                                                                                                                    >",
+        "<KL_DT_EXT_ACC          >",
+        "<KL_KT_INTERNAL>",
+        "<KL_KT_CLIENT           >",
+        "<KL_KT_ACC              >",
+        "<KL_KT_INN     >",
+        "<KL_KT_KPP>",
+        "<KL_KT_BIC>",
+        "<KL_KT_NAME                                                                                                                                                    >",
+        "<KL_KT_EXT_ACC          >",
+        "<REQ_MAN_CLIENT         >",
+        "<REQ_MAN_NAME                                                                                                                                                  >",
+        "<REQ_MAN_COUNTRY                                                                                   >",
+        "<REQ_MAN_ADDRESS                                                                                                                                                                                                                                         >",
+        "<REQ_MAN_REZIDENT>",
+        "<REQ_MAN_DOC_BIRTH_PLACE                                                                                                                                                                                                                                 >",
+        "<REQ_MAN_DOC_DATE>",
+        "<REQ_MAN_DOC_TYPE                                >",
+        "<REQ_MAN_DOC_SER>",
+        "<REQ_MAN_DOC_NUM>",
+        "<REQ_MAN_DOC_WHO                                                                                   >",
+        "<REQ_MAN_DOC_DEPART_CODE>",
+        "END_HEAD"
+       );
+end;
+
+macro cftDocGenICODE(aKey,aKind,docFrom,docChapter)
+  var r="";
+  r=string(docFrom-1)+string(docChapter)+substr(aKey,3)+aKind;
+  return r;
+end;
+
+
+macro cftDocStr(doc)
+  //return;
+  var
+   r="",
+   date_doc=dmy(doc.rec.Date_Document),
+   date_val=dmy(doc.rec.Date_Carry),
+   date_sref="",
+   date_inp="",
+   vid_doc="", prior="", numb="",
+   cln_dt="", cln_kt="",
+   int_dt="True", nam_dt="", acc_dt="", acc_p, nam_p="", inn_p="", kpp_p="", bik_p="", 
+   int_kt="True", nam_kt="", acc_kt="", acc_r, nam_r="", inn_r="", kpp_r="", bik_r="", 
+   curr_oper="",
+   dep_id="001-12",
+   ground,
+   is_tax="False", taxPayer="", taxcbc="", taxOkato="", taxGround="", taxPeriod="", taxNumber="", taxDate="", taxPaymentType="";
+
+  nam_p=doc.rec.Payer;
+  nam_r=doc.rec.Receiver;
+  kpp_p=doc.rec.KPP_Payer;
+  kpp_r=doc.rec.KPP_Receiver;
+  bik_p=doc.rec.MFO_Payer;
+  bik_r=doc.rec.MFO_Receiver;
+  vid_doc=shifri(doc.rec.Shifr_Oper, doc);
+  acc_dt=doc.rec.acc1;
+  acc_kt=doc.rec.acc2;
+  acc_p=doc.rec.Account_Payer;
+  acc_r=doc.rec.Account_Receiver;
+  inn_p=doc.rec.OKPO_Payer;
+  inn_r=doc.rec.OKPO_Receiver;
+  prior=doc.rec.Payment;
+  if(prior==0)
+    prior=1;
+  end;
+  if(prior>6)
+    prior=6;
+  end;
+  //1-99999999
+  numb=doc.rec.Numb_Document;
+  numb=evd_only_dig(numb);
+  if(int(numb)>99999999)
+    numb=substr(numb,1,3);
+  end;
+  if((numb=="0")or(numb=="00")or(numb=="000")or(numb==""))
+    numb="1";
+  end;
+  if(strlen(doc.rec.ComposerStatus) > 0)
+    is_tax="True";
+    taxPayer=doc.rec.ComposerStatus;
+    taxcbc=doc.rec.BudjClassifCode;
+    taxOkato=doc.rec.Okato;
+    taxGround=doc.rec.taxGround;
+    taxPeriod=doc.rec.taxPeriod;
+    taxNumber=doc.rec.taxNumber;
+    taxDate=doc.rec.taxDate;
+    taxPaymentType=doc.rec.taxPaymentType;
+  end;
+
+  if((doc.rec.Real_Payer!=doc.rec.Account_Payer)and(bik_p!=""))
+    int_dt="False";
+    bik_p=nvl(bik_p,".");
+    inn_p=nvl(inn_p);
+    acc_p=nvl(acc_p);
+  else
+    cln_dt=cl4acc(acc_dt);
+  end;
+  if((doc.rec.Real_Receiver!=doc.rec.Account_Receiver)and(bik_r!=""))
+    int_kt="False";
+    bik_r=nvl(bik_r,".");
+    inn_r=nvl(inn_r);
+    acc_r=nvl(acc_r);
+  else
+    cln_kt=cl4acc(acc_kt);
+  end;
+
+  if(substr(doc.rec.Ground,1,3)=="{VO")
+    curr_oper=substr(doc.rec.ground,4,5);
+  end;
+
+  ground=del2crnl(doc.rec.ground);
+
+  if(trim(nam_p)=="") nam_p="___"; end;
+  if(trim(nam_r)=="") nam_r="___"; end;
+
+  /*
+  if(taxGround=="’")
+    taxNumber="0";
+  end;
+  */
+
+  //SUM - αγ¬¬  ―® „.; SUM_PO -αγ¬¬  ―® ΰ.; SUM_NT -αγ¬¬  Ά ΰγ΅
+  r=
+          qq(doc.rec.icode,                            25)+//<ICODE                  >
+          qq("001",                                     8)+//<FILIAL>
+          qq(dep_id,                                   20)+//<DEPART            >
+          qq(date_doc,                                 15)+//<DOCUMENT_DATE>
+          qq(numb,                                     14)+//<DOCUMENT_NUM>
+          qq(doc.rec.Oper,                             25)+//<DOCUMENT_USER          >
+          qq(acc_dt,                                   25)+//<ACC_DT                 >
+          qq(acc_kt,                                   25)+//<ACC_KT                 >
+          qq(date_val,                                 12)+//<DATE_DEBET>
+          qq(date_doc,                                 10)+//<DATE_DOC>
+          qq("",                                       10)+//<DATE_INP>
+          qq(date_val,                                 11)+//<DATE_PROV>
+          qq(date_val,                                 10)+//<DATE_PL >
+          qq(date_sref,                                14)+//<DOC_SEND_REF>
+          qq(curr_oper,                                11)+//<CURR_OPER>
+          qq(ground,                                   250)+//<NAZN                                                                                                                                                                                                                                                    >
+          qq("",                                       11)+//<NUM_CHECK>
+          qq("",                                        8)+//<SERIES>
+          qq(prior,                                    11)+//<PRIORITET>
+          qq(doc.rec.Oper,                             25)+//<PROV_USER              >
+          qq(doc.rec.sum1,                             20)+//<SUM               >
+          qq(doc.rec.sum2,                             20)+//<SUM_PO            >
+          qq(doc.rec.sumRu,                            20)+//<SUM_NT            >
+          qq("",                                      320)+//<SUM_KSPL                                                                                                                                                                                                                                                                                                                      >
+          qq(vid_doc,                                  16)+//<VID_DOC       >
+          qq(doc.rec.Number_Pack,                       8)+//<PACHKA>
+          qq("",                                     2000)+//<COMMENT                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       >
+          qq("",                                     2000)+//<COND_PAY_MEMO                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 >
+          qq(taxCbc,                                   20)+//<BUD_KBK           >
+          qq(taxDate,                                  14)+//<BUD_DATE_EXP>
+          qq(taxPeriod,                                13)+//<BUD_DATE_NU>
+          qq(taxGround,                                18)+//<BUD_KOD_NAZN_PAY>
+          qq(taxNumber,                                15)+//<BUD_NUM_EXP  >
+          qq(taxOkato,                                 11)+//<BUD_OKATO>
+          qq(taxPayer,                                 14)+//<BUD_TAXPAYER>
+          qq(taxPaymentType,                           14)+//<BUD_TYPE_EXP>
+          qq(is_tax,                                   16)+//<BUDGET_PAYMENT>
+          qq(int_dt,                                   16)+//<KL_DT_INTERNAL>
+          qq(cln_dt,                                   25)+//<KL_DT_CLIENT           >
+          qq(acc_dt,                                   25)+//<KL_DT_ACC              >
+          qq(inn_p,                                    16)+//<KL_DT_INN     >
+          qq(kpp_p,                                    11)+//<KL_DT_KPP>
+          qq(bik_p,                                    11)+//<KL_DT_BIC>
+          qq(nam_p,                                   160)+//<KL_DT_NAME                                                                                                                                                    >
+          qq(acc_p,                                    25)+//<KL_DT_EXT_ACC          >
+          qq(int_kt,                                   16)+//<KL_KT_INTERNAL>
+          qq(cln_kt,                                   25)+//<KL_KT_CLIENT           >
+          qq(acc_kt,                                   25)+//<KL_KT_ACC              >
+          qq(inn_r,                                    16)+//<KL_KT_INN     >
+          qq(kpp_r,                                    11)+//<KL_KT_KPP>
+          qq(bik_r,                                    11)+//<KL_KT_BIC>
+          qq(nam_r,                                   160)+//<KL_KT_NAME                                                                                                                                                    >
+          qq(acc_r,                                    25)+//<KL_KT_EXT_ACC          >
+          qq("",                                       25)+//<REQ_MAN_CLIENT         >
+          qq("",                                      160)+//<REQ_MAN_NAME                                                                                                                                                  >
+          qq("",                                      100)+//<REQ_MAN_COUNTRY                                                                                   >
+          qq("",                                      250)+//<REQ_MAN_ADDRESS                                                                                                                                                                                                                                         >
+          qq("",                                       18)+//<REQ_MAN_REZIDENT>
+          qq("",                                      250)+//<REQ_MAN_DOC_BIRTH_PLACE                                                                                                                                                                                                                                 >
+          qq("",                                       18)+//<REQ_MAN_DOC_DATE>
+          qq("",                                       50)+//<REQ_MAN_DOC_TYPE                                >
+          qq("",                                       17)+//<REQ_MAN_DOC_SER>
+          qq("",                                       17)+//<REQ_MAN_DOC_NUM>
+          qq("",                                      100)+//<REQ_MAN_DOC_WHO                                                                                   >
+          qq("",                                       25)+//<REQ_MAN_DOC_DEPART_CODE>
+
+          qq("",                                        0) //
+         ;
+  return r;
+  /*
+  if((substr(acc_dt,1,5)=="00000")or(substr(acc_kt,1,5)=="00000"))
+    [--- … …„…‹… ‚!!! ################## ########## ####################### ########################### ############################ #]
+    (doc.rec.Numb_Document, date_doc, doc.rec.Sum:a, acc_kt, acc_kt, doc.rec.Ground);
+  end;
+  */
+end;
+
+macro printLine(doc)
+  println(cftDocStr(doc));
+end;

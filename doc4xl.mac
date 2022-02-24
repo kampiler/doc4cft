@@ -1,0 +1,54 @@
+import "../mac/m_sys/evd/tfe.mac";
+
+
+macro cntICODE(icode)
+  var r=0;
+  var stat;
+  var doc12   = TBFile("cft_doc.dbt",  "R",  12, "..\\DBFile\\cft_doc.dbt",  "bankcft.def");
+  doc12.rec.icode=icode;
+  stat=doc12.geteq();
+  while(stat and (doc12.rec.icode==icode))
+    r=r+1;
+    stat=doc12.next();
+  end;
+  return r;
+end;
+
+var doc   = TBFile("cft_doc.dbt",  "R",  0, "..\\DBFile\\cft_doc.dbt",  "bankcft.def");
+
+var ox=TFE("doc4cft"), ix=0;
+ox.HeadPeriod("doc4cft");
+ox.TimeStamp;
+ox.AutoFilter;
+ox.AddColumn("Nп/п",60);
+ox.AddColumn("icode",160);
+ox.AddColumn("cnt",40);
+ox.AddColumn("aKind",45);
+ox.AddColumn("aKey",160);
+ox.AddColumn("Сумма1",90);
+ox.AddColumn("Сумма2",90);
+ox.AddColumn("СуммаРу",90);
+ox.AddColumn("сч.д",120);
+ox.AddColumn("сч.к",120);
+ox.AddColumn("назначение",350);
+
+while(doc.next())
+  message(doc.rec.Date_Carry);
+  ix=ix+1;
+
+  ox.AddCell(ix);//doc.rec.Numb_Document
+  ox.AddCell(doc.rec.icode);
+  ox.AddCell(cntICODE(doc.rec.icode));
+  ox.AddCell(doc.rec.iApplicationKind);
+  ox.AddCell(doc.rec.ApplicationKey);
+  ox.AddCell(doc.rec.sum1);
+  ox.AddCell(doc.rec.sum2);
+  ox.AddCell(doc.rec.sumRu);
+  ox.AddCell(doc.rec.acc1);
+  ox.AddCell(doc.rec.acc2);
+  ox.AddCell(doc.rec.Ground);
+  ox.AddRow;
+
+end;
+
+ox.Go;
